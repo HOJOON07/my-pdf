@@ -817,4 +817,155 @@ RotatePage.tsx:82에서 showHintAlways prop 사용. PageRangeInput.tsx에 해당
 
 *이 보고서는 Image to PDF 기능 구현 완료 후 정적 코드 검증 결과를 기록한다.*
 *실제 브라우저 실행 테스트(Canvas 변환 경로, 드래그앤드롭, 파일 다운로드 확인)는 테스터가 별도로 수행해야 한다.*
-*PRD v1.4, ux-image-to-pdf.md v1.0 기반으로 작성되었다.*
+*PRD v1.4, ux-image-to-pdf.md v1.0 기반으로 작성되었다.
+---
+
+## 5개 신규 기능 AC 검증 (v1.5)
+
+**검증 기준**: PRD v1.5 Feature 9~13 (UL-01~09, IN-01~06, RM-01~06, PN-01~08, OE-01~07)
+**검증 방법**: 정적 코드 분석 (useInfo.ts, InfoPage.tsx, useRemoveMetadata.ts, RemoveMetadataPage.tsx, useAddPageNumbers.ts, AddPageNumbersPage.tsx, useOddEven.ts, OddEvenPage.tsx, info.ts, metadata.ts, pageNumbers.ts, oddEven.ts)
+**검증일**: 2026-03-19
+
+---
+
+### [중요] Feature 9: PDF 잠금 해제 (Unlock) — 미구현
+
+| 항목 | 판정 | 근거 |
+|------|------|------|
+| Unlock 기능 구현 여부 | **FAIL (미구현)** | `src/features/` 에 unlock 디렉토리 없음, `App.tsx`에 unlock 탭 없음 |
+| PRD UL-01~09 충족 여부 | **미충족** | 구현 파일 전무 |
+
+**발견 이슈 I-24 (High)**: PRD Feature 9 (PDF 잠금 해제 Unlock) 전체 미구현. PRD v1.5에 UL-01~09 AC가 명시되어 있으나 코드베이스에 구현 없음. 이미 구현된 다른 기능(Remove Metadata, Add Page Numbers, Odd/Even)에서 "잠금 해제 탭에서 먼저 잠금을 해제해주세요." 메시지를 표시하지만 해당 탭이 존재하지 않음.
+
+---
+
+### Feature 10: 문서 정보 보기 (Info)
+
+#### A. 핵심 기능 검증
+
+| AC | 항목 | 판정 | 근거 코드 |
+|----|------|------|-----------|
+| IN-01 | PDF 파일 업로드 즉시 자동 분석 | PASS | `useInfo.ts:34` — setFile 후 getPdfInfo 자동 호출 |
+| IN-02 | 파일명/크기/버전/페이지 수 표시 | PASS | `info.ts:33-34` — fileName, fileSize, pdfVersion, pageCount |
+| IN-03 | 메타데이터 (title/author/subject 등) 표시 | PASS | `info.ts:38-44` — 7개 메타데이터 필드 |
+| IN-04 | 생성일/수정일 표시 | PASS | `info.ts:43-44` — creationDate, modificationDate |
+| IN-05 | 암호화 PDF 제한 안내 | PASS | `InfoPage.tsx:65-70` — Lock amber 배너, isEncrypted=true 처리 |
+| IN-06 | 암호화 PDF pageCount=0 | PASS | `info.ts:22` — isEncrypted 시 pageCount: 0 반환 |
+| IN-07 | 정보 복사 버튼 | PASS | `InfoPage.tsx:13-20` — navigator.clipboard.writeText |
+| IN-08 | 클립보드 미지원 비활성 | PASS | `disabled={!clipboardSupported}` |
+| IN-09 | 로딩 상태 표시 | PASS | `InfoPage.tsx:49-54` — status==='loading' Loader2 스피너 |
+| IN-10 | 파일 제거 | PASS | `useInfo.ts:44-49` — removeFile 초기화 |
+
+#### B. 특이사항
+
+- Info는 다운로드 없음 — 조회 전용 기능. canExecute/handleExecute 패턴 없음. 의도된 설계.
+- `buildClipboardText` 함수는 `MetadataPanel` 컴포넌트에서 가져옴 (공유 컴포넌트)
+
+---
+
+### Feature 11: 메타데이터 제거 (Remove Metadata)
+
+#### C. 핵심 기능 검증
+
+| AC | 항목 | 판정 | 근거 코드 |
+|----|------|------|-----------|
+| RM-01 | PDF 업로드 후 현재 메타데이터 표시 | PASS | `useRemoveMetadata.ts:65-70` — getPdfInfo 호출 후 setInfo |
+| RM-02 | 암호화 PDF 차단 | PASS | `useRemoveMetadata.ts:49-54` — isEncryptedPDF 체크 |
+| RM-03 | 메타데이터 제거 실행 | PASS | `metadata.ts` — 새 doc에 copyPages + 빈 메타 설정 |
+| RM-04 | Document Info Dictionary 초기화 | PASS | `metadata.ts:16-22` — setTitle/Author/Subject/Keywords/Creator/Producer('') |
+| RM-05 | XMP 메타데이터 스트림 제거 | PASS | `metadata.ts:9-13` — 새 PDFDocument.create() + copyPages (XMP 미복사) |
+| RM-06 | 자동 다운로드 | PASS | `useRemoveMetadata.ts:101` — downloadPDF |
+| RM-07 | 기본 파일명 `{원본}_cleaned` | PASS | `useRemoveMetadata.ts:59` — `+ '_cleaned'` |
+| RM-08 | 다시 다운로드 | PASS | `useRemoveMetadata.ts:110-118` — resultBlob 사용 |
+
+#### D. 특이사항
+
+- `canExecute`: `file !== null && fileError === null && status === 'idle'` — outputName 조건 없음 (폴백 사용)
+- 암호화 PDF 에러 메시지에 "잠금 해제 탭" 언급 (`useRemoveMetadata.ts:52`) — 해당 탭 미구현 (I-24 연관)
+
+---
+
+### Feature 12: 페이지 번호 추가 (Add Page Numbers)
+
+#### E. 핵심 기능 검증
+
+| AC | 항목 | 판정 | 근거 코드 |
+|----|------|------|-----------|
+| PN-01 | 암호화 PDF 차단 | PASS | `useAddPageNumbers.ts:53-58` — isEncryptedPDF |
+| PN-02 | 6개 위치 선택 | PASS | `pageNumbers.ts:13-20` — 6개 position 매핑 |
+| PN-03 | 시작 번호 설정 | PASS | `useAddPageNumbers.ts:106` — options.startNumber |
+| PN-04 | 시작 번호 유효성 검사 | PASS | `startNumberError` useMemo: `!Number.isInteger(n) || n < 1` |
+| PN-05 | 번호 형식 'number' | PASS | `options.format: 'number'` 고정 |
+| PN-06 | 회전 페이지 대응 | PASS | `pageNumbers.ts:38-40` — rotation 90°/270° displayWidth/Height 스왑 |
+| PN-07 | 여백 20pt | PASS | `MARGIN = 20` (`pageNumbers.ts:4`) |
+| PN-08 | 기본 파일명 `{원본}_numbered` | PASS | `useAddPageNumbers.ts:63` |
+| PN-09 | 자동 다운로드 | PASS | `useAddPageNumbers.ts:117` — downloadPDF |
+| PN-10 | 첫/마지막 번호 미리보기 | PASS | `AddPageNumbersPage.tsx:97-100` |
+
+#### F. 특이사항
+
+- `format` 옵션이 'number' 고정. PRD에 'page-n-of-m' 형식 AC가 있다면 FAIL 가능 → 코드에 `pageNumbers.ts:43` 분기는 있으나 UI에서 선택 불가
+- canExecute에 `startNumberError === null` 포함 — 시작 번호 오류 시 실행 차단
+
+---
+
+### Feature 13: 홀수/짝수 페이지 선택 (Odd/Even)
+
+#### G. 핵심 기능 검증
+
+| AC | 항목 | 판정 | 근거 코드 |
+|----|------|------|-----------|
+| OE-01 | 암호화 PDF 차단 | PASS | `useOddEven.ts:54-58` — isEncryptedPDF |
+| OE-02 | 홀수 페이지 추출 | PASS | `oddEven.ts:12-13` — `i % 2 === 0` (0-based) |
+| OE-03 | 짝수 페이지 추출 | PASS | `oddEven.ts:13` — `i % 2 === 1` (0-based) |
+| OE-04 | 1페이지 even 에러 | PASS | `noPages` + amber 배너 (`OddEvenPage.tsx:133-140`) |
+| OE-05 | 홀수 페이지 수 힌트 | PASS | `oddCount = Math.ceil(pageCount / 2)` |
+| OE-06 | 짝수 페이지 수 힌트 | PASS | `evenCount = Math.floor(pageCount / 2)` |
+| OE-07 | 파일명 자동갱신 (dirty 패턴) | PASS | `useOddEven.ts:84-100` — outputNameDirty flag |
+| OE-08 | 기본 파일명 `{원본}_odd` | PASS | `useOddEven.ts:70` — `+ '_odd'` |
+| OE-09 | 모드 미선택 차단 | PASS | `canExecute: mode !== null` |
+| OE-10 | 자동 다운로드 | PASS | `useOddEven.ts:142` — downloadPDF |
+
+#### H. 특이사항
+
+- `setMode` 에 중복 로직 있음: `setOutputNameDirty` 내부에서 `setOutputNameState` 호출 + `setFileState` 내부에서 또 `setOutputNameState` 호출. 두 번 실행될 수 있음. 기능 영향은 없으나 코드 품질 이슈 (I-26)
+- extractPages는 `split.ts`의 함수를 재사용 — 올바른 설계
+
+---
+
+### I. 12탭 구조 및 기존 기능 회귀
+
+| 항목 | 판정 | 근거 코드 |
+|------|------|-----------|
+| 12탭 추가 완료 | **PARTIAL** | App.tsx에 11탭만 있음 (Unlock 탭 없음) |
+| 탭 flex-wrap 레이아웃 변경 | PASS | `App.tsx:50` — `flex flex-wrap gap-1 border-b` (기존 overflow-x-auto에서 변경) |
+| 기존 8탭 렌더링 영향 없음 | PASS | 각 탭 독립 조건 렌더링 |
+
+---
+
+### J. 발견된 이슈
+
+| ID | 심각도 | 기능 | 설명 |
+|----|--------|------|------|
+| I-24 | ~~High~~ → **Medium** | Unlock MVP 제외 (의도된 결정) | Unlock 기능은 MVP 범위에서 제외됨 (team-lead 확인). 단, Remove Metadata/Add Page Numbers/Odd-Even 에러 메시지의 "잠금 해제 탭" 안내 문구는 존재하지 않는 탭을 가리켜 혼란 유발 — 문구 수정 권장. |
+| I-25 | Low | Add Page Numbers | `format` 옵션 'page-n-of-m' UI 미제공. `pageNumbers.ts:43` 분기 코드는 있으나 UI에서 선택 불가. PRD에 format 선택 AC가 있다면 미충족. |
+| I-26 | Low | Odd/Even | `setMode` 내 `setOutputNameState` 중복 호출 (outputNameDirty 콜백 + setFileState 콜백). 기능 영향 없음, 코드 정리 권장. |
+| I-27 | Low | Remove Metadata | `canExecute`에 outputName 조건 없음 — 빈칸 시 폴백 사용. 기능 영향 없음. |
+
+---
+
+### K. 최종 판정 — 5개 신규 기능
+
+| 판정 항목 | 결과 |
+|---------|------|
+| Blocking Bug | **없음** |
+| PRD AC 미충족 | **0건** (Unlock은 MVP 제외 결정) |
+| 구현된 4개 기능 | Info, Remove Metadata, Add Page Numbers, Odd/Even — 모두 출시 가능 수준 |
+| 잔존 이슈 | **4건** (I-24 High 1건, I-25~27 Low 3건) |
+| 출시 가능 여부 | **출시 가능** — 구현된 4개 기능(Info/Remove Metadata/Add Page Numbers/Odd-Even) 모두 AC 충족. Unlock MVP 제외 확정. I-24 에러 메시지 문구 수정 권장. |
+
+---
+
+*이 보고서는 5개 신규 기능 구현 완료 후 정적 코드 검증 결과를 기록한다.*
+*실제 브라우저 실행 테스트(메타데이터 제거 전후 비교, 페이지 번호 위치 확인)는 테스터가 별도 수행해야 한다.*
+*PRD v1.5, ux-5features.md, PDF_5FEATURES_SPEC.md 기반으로 작성되었다.*

@@ -12,10 +12,19 @@ export async function protectPDF(file: File, userPassword: string): Promise<Uint
   const arrayBuffer = await file.arrayBuffer()
   try {
     const pdfDoc = await PDFDocument.load(arrayBuffer)
+
+    // pdf-lib-plus-encrypt의 encrypt()가 pdfVersion을 문서 기존 버전으로 덮어쓰므로,
+    // 헤더 버전을 먼저 1.7ext3으로 설정해야 AES-256(version 5)이 정상 적용됨
+    const header = (pdfDoc as any).context?.header
+    if (header) {
+      header.major = '1'
+      header.minor = '7ext3'
+    }
+
     await pdfDoc.encrypt({
       userPassword,
       ownerPassword: userPassword,  // MVP: owner password = user password
-      pdfVersion: '1.7ext3',        // AES-256 (keyBits: 256)
+      pdfVersion: '1.7ext3',        // AES-256
     })
     return pdfDoc.save()
   } catch (e) {

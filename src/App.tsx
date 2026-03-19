@@ -10,6 +10,10 @@ import { RotatePage } from '@/features/rotate/RotatePage'
 import { ReorderPage } from '@/features/reorder/ReorderPage'
 import { PasswordProtectPage } from '@/features/encrypt/PasswordProtectPage'
 import { ImageToPdfPage } from '@/features/image-to-pdf/ImageToPdfPage'
+import { InfoPage } from '@/features/info/InfoPage'
+import { RemoveMetadataPage } from '@/features/remove-metadata/RemoveMetadataPage'
+import { AddPageNumbersPage } from '@/features/add-page-numbers/AddPageNumbersPage'
+import { OddEvenPage } from '@/features/odd-even/OddEvenPage'
 
 const tabs: { id: ActiveTab; label: string }[] = [
   { id: 'merge',   label: '병합 (Merge)'           },
@@ -19,7 +23,11 @@ const tabs: { id: ActiveTab; label: string }[] = [
   { id: 'rotate',  label: '회전 (Rotate)'          },
   { id: 'reorder', label: '순서 바꾸기 (Reorder)'  },
   { id: 'encrypt',      label: '암호화 (Protect)'       },
-  { id: 'image-to-pdf', label: '이미지→PDF'             },
+  { id: 'image-to-pdf',     label: '이미지→PDF'             },
+  { id: 'info',             label: '문서 정보 (Info)'       },
+  { id: 'remove-metadata',  label: '메타데이터 제거'         },
+  { id: 'add-page-numbers', label: '페이지 번호 추가'        },
+  { id: 'odd-even',         label: '홀수/짝수 선택'          },
 ]
 
 export default function App() {
@@ -69,7 +77,11 @@ export default function App() {
         {activeTab === 'rotate'  && <RotatePage />}
         {activeTab === 'reorder' && <ReorderPage />}
         {activeTab === 'encrypt'      && <PasswordProtectPage />}
-        {activeTab === 'image-to-pdf' && <ImageToPdfPage />}
+        {activeTab === 'image-to-pdf'     && <ImageToPdfPage />}
+        {activeTab === 'info'             && <InfoPage />}
+        {activeTab === 'remove-metadata'  && <RemoveMetadataPage />}
+        {activeTab === 'add-page-numbers' && <AddPageNumbersPage />}
+        {activeTab === 'odd-even'         && <OddEvenPage />}
       </main>
 
       {/* Footer */}

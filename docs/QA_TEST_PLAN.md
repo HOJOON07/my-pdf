@@ -1,9 +1,9 @@
 # QA 테스트 계획서: vibe-pdf MVP
 
-**버전**: 5.0
+**버전**: 6.0
 **작성일**: 2026-03-19
 **작성자**: QA Engineer
-**기반 문서**: PRD v1.4, PDF_DOMAIN_SPEC v1.0.0, PDF_ROTATE_REORDER_SPEC, PDF_ENCRYPT_SPEC, PDF_IMAGE_TO_PDF_SPEC, Extract/Delete/Rotate/Reorder/Encrypt/ImageToPdf 구현 코드
+**기반 문서**: PRD v1.4, PDF_DOMAIN_SPEC v1.0.0, PDF_ROTATE_REORDER_SPEC, PDF_ENCRYPT_SPEC, PDF_IMAGE_TO_PDF_SPEC, Extract/Delete/Rotate/Reorder/Encrypt/ImageToPdf/Info/RemoveMetadata/AddPageNumbers/OddEven 구현 코드
 
 ---
 
@@ -21,6 +21,10 @@
 | PDF 순서 변경 (Reorder) | 파일 추가, 페이지 카드 목록, 드래그앤드롭, Reset, 순서 변경 PDF 다운로드 |
 | PDF 암호화 (Encrypt) | 파일 추가, 비밀번호 입력, 비밀번호 확인, 출력 파일명, 암호화 실행, 다운로드 |
 | 이미지→PDF (Image to PDF) | 이미지 업로드, 포맷 검증, 순서 변경, 페이지 크기 선택, 변환 실행, 다운로드 |
+| 문서 정보 (Info) | PDF 업로드, 자동 분석, 메타데이터 표시, 암호화 처리, 정보 복사 |
+| 메타데이터 제거 (Remove Metadata) | 파일 업로드, 메타데이터 미리보기, 제거 실행, 다운로드 |
+| 페이지 번호 추가 (Add Page Numbers) | 파일 업로드, 위치 선택, 시작 번호, 번호 추가, 다운로드 |
+| 홀수/짝수 선택 (Odd/Even) | 파일 업로드, 모드 선택, 페이지 수 힌트, 추출 실행, 다운로드 |
 | 공통 입력 검증 | 파일 타입 검사, 파일 크기 정책, 비활성화 버튼 상태 |
 | 에러 처리 | 암호화 파일, 손상 파일, 잘못된 범위 입력, 메모리 한계 |
 | 다운로드 결과 검증 | PDF 무결성, 페이지 순서, ZIP 구성, 파일명 |
@@ -41,6 +45,8 @@
 | 암호화 라이브러리 | @cantoo/qpdf WASM | **pdf-lib-plus-encrypt** (순수 JS) | Web Worker 미사용, 메인 스레드 처리 |
 | Encrypt 파일 크기 거부 | 100MB | **100MB** (ENCRYPT_MAX 별도 상수) | Encrypt 전용 제한 |
 | Image to PDF 포맷 변환 | — | WebP/GIF/BMP → Canvas → PNG 경유 | HEIC/TIFF/SVG 미지원 |
+| Unlock 기능 | 구현 예정 (PDF_5FEATURES_SPEC) | **미구현** | App.tsx 탭 없음, 구현 파일 없음 |
+| 탭 레이아웃 변경 | overflow-x-auto → | **flex-wrap gap-1** | App.tsx:50, 12탭 대응 |
 
 ### 1.3 테스트 제외 범위 (Out of Scope)
 
@@ -444,6 +450,106 @@
 | TC-ITP-113 | 출력 파일명 빈칸 | outputName 지우기 | 폴백 "images.pdf" 사용 (canConvert는 빈칸이면 false) |
 | TC-ITP-114 | 탭 전환 후 복귀 시 초기화 | 이미지→PDF 탭 → 다른 탭 → 복귀 | 상태 초기화 (React 언마운트) |
 | TC-ITP-115 | 네트워크 요청 없음 | 변환 진행 중 Network 탭 확인 | 외부 요청 0건 |
+
+
+
+
+### 3.10 문서 정보 보기 (Info) — v6.0 신규
+
+#### 3.10.1 정상 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-IN-001 | 일반 PDF 정보 조회 | 일반 PDF 업로드 | 파일명/크기/버전/페이지 수/제목/저자 등 메타데이터 표시 |
+| TC-IN-002 | 암호화 PDF 정보 조회 | 암호화된 PDF 업로드 | 제한 안내 배너 + 파일명/크기/버전/pageCount=0 표시 |
+| TC-IN-003 | 메타데이터 없는 PDF | 메타데이터 비어있는 PDF | 해당 필드 빈칸 또는 "없음" 표시 |
+| TC-IN-004 | 파일 제거 후 초기화 | X 버튼 클릭 | 드롭존으로 복귀, 정보 패널 사라짐 |
+| TC-IN-005 | 정보 복사 버튼 | "정보 복사" 클릭 | 클립보드에 텍스트 복사, "복사됨!" 2초 표시 |
+| TC-IN-006 | PDF 버전 표시 | PDF 1.7 파일 | 파일 헤더에서 읽은 버전 표시 |
+| TC-IN-007 | 로딩 상태 표시 | 큰 파일 업로드 직후 | "파일 분석 중이에요..." 스피너 표시 |
+
+#### 3.10.2 부정적 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-IN-101 | 비-PDF 파일 | .jpg 드래그 | 에러 메시지 "PDF 파일만 업로드할 수 있어요." |
+| TC-IN-102 | 손상된 PDF | 손상 파일 | 에러 "PDF 파일을 읽을 수 없어요." |
+| TC-IN-103 | 클립보드 미지원 | 구형 브라우저 | "정보 복사" 버튼 비활성(disabled) |
+
+---
+
+### 3.11 메타데이터 제거 (Remove Metadata) — v6.0 신규
+
+#### 3.11.1 정상 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-RM-001 | 기본 메타데이터 제거 | 메타데이터 있는 PDF → 실행 | 완료 카드 + 자동 다운로드 |
+| TC-RM-002 | 기본 파일명 확인 | "report.pdf" 업로드 | outputName 기본값 "report_cleaned" |
+| TC-RM-003 | 현재 메타데이터 미리보기 | PDF 업로드 후 | MetadataPanel에 기존 메타데이터 표시 |
+| TC-RM-004 | 다시 다운로드 | 완료 후 "다시 다운로드" | 동일 파일 재다운로드 |
+| TC-RM-005 | 새 작업 시작 | 완료 후 초기화 | 드롭존 복귀 |
+| TC-RM-006 | 에러 후 다시 시도 | 처리 실패 → "다시 시도" | idle 복귀, 파일 유지 |
+
+#### 3.11.2 부정적 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-RM-101 | 암호화 PDF 차단 | 암호화된 PDF 업로드 | "암호화된 파일은 메타데이터 제거를 지원하지 않아요." 에러 |
+| TC-RM-102 | 비-PDF 파일 | .docx 업로드 | 파일 타입 에러 |
+| TC-RM-103 | 손상 PDF 처리 실패 | 손상 파일 | 처리 중 에러 카드 |
+
+---
+
+### 3.12 페이지 번호 추가 (Add Page Numbers) — v6.0 신규
+
+#### 3.12.1 정상 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-PN-001 | 기본 페이지 번호 추가 | PDF + bottom-center + 시작=1 | 완료 카드 + 페이지 하단 중앙에 번호 |
+| TC-PN-002 | 6개 위치 옵션 | top-left / top-center / top-right / bottom-left / bottom-center / bottom-right | 선택한 위치에 번호 표시 |
+| TC-PN-003 | 시작 번호 변경 | 시작 번호 5 | 첫 페이지 "5", 두 번째 "6", ... |
+| TC-PN-004 | 기본 파일명 | "doc.pdf" 업로드 | outputName 기본값 "doc_numbered" |
+| TC-PN-005 | 첫/마지막 번호 미리보기 | 10페이지 + 시작=3 | "첫 페이지 번호: 3, 마지막 페이지 번호: 12" 표시 |
+| TC-PN-006 | 회전 페이지 처리 | 90° 회전된 페이지 포함 PDF | displayWidth/Height 스왑, 번호 위치 정확 |
+| TC-PN-007 | 다시 다운로드 | 완료 후 클릭 | 재다운로드 성공 |
+
+#### 3.12.2 부정적 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-PN-101 | 암호화 PDF 차단 | 암호화된 PDF | "암호화된 파일은 지원하지 않아요." 에러 |
+| TC-PN-102 | 시작 번호 0 입력 | startNumber=0 | "1 이상의 숫자를 입력해주세요." 에러, 버튼 비활성 |
+| TC-PN-103 | 시작 번호 음수 | startNumber=-1 | 에러, 버튼 비활성 |
+| TC-PN-104 | 소수 입력 | startNumber=1.5 | Number.isInteger 실패 → 에러 |
+| TC-PN-105 | 비-PDF 파일 | .png 업로드 | 파일 타입 에러 |
+
+---
+
+### 3.13 홀수/짝수 페이지 선택 (Odd/Even) — v6.0 신규
+
+#### 3.13.1 정상 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-OE-001 | 홀수 페이지 추출 | 6페이지 PDF + odd 선택 | 3페이지 PDF (1,3,5 페이지) 다운로드 |
+| TC-OE-002 | 짝수 페이지 추출 | 6페이지 PDF + even 선택 | 3페이지 PDF (2,4,6 페이지) |
+| TC-OE-003 | 홀수 hint 표시 | 7페이지 PDF | "1, 3, 5 ... 페이지 → 4페이지 추출" hint |
+| TC-OE-004 | 짝수 hint 표시 | 7페이지 PDF | "2, 4, 6 ... 페이지 → 3페이지 추출" hint |
+| TC-OE-005 | 파일명 자동갱신 (odd) | mode=odd 선택 | outputName "{원본}_odd" |
+| TC-OE-006 | 파일명 자동갱신 (even) | mode=even 선택 | outputName "{원본}_even" |
+| TC-OE-007 | 파일명 직접 수정 후 모드 전환 | 파일명 수정 후 odd↔even | 수정한 파일명 유지 (outputNameDirty=true) |
+| TC-OE-008 | 다시 다운로드 | 완료 후 클릭 | 재다운로드 성공 |
+
+#### 3.13.2 부정적 케이스
+
+| ID | 테스트 항목 | 입력 | 기대 결과 |
+|----|------------|------|-----------|
+| TC-OE-101 | 1페이지 PDF + even | 1페이지 PDF + even 선택 | "짝수 페이지가 없어요." amber 배너, 버튼 비활성 |
+| TC-OE-102 | 모드 미선택 | 파일 업로드 후 모드 없이 실행 시도 | canExecute=false (mode=null), 버튼 비활성 |
+| TC-OE-103 | 암호화 PDF | 암호화된 PDF 업로드 | "암호화된 파일은 지원하지 않아요." 에러 |
+| TC-OE-104 | 비-PDF 파일 | .txt 업로드 | 파일 타입 에러 |
 
 
 
@@ -860,6 +966,61 @@
 
 
 
+
+## 4.9 입력 검증 — 5개 신규 기능
+
+| ID | 기능 | 검증 항목 | 기대 동작 |
+|----|------|----------|-----------|
+| IV-071 | Info | 비-PDF 차단 | validateFileType 에러 |
+| IV-072 | Remove Metadata | 암호화 PDF 차단 | isEncryptedPDF → fileError |
+| IV-073 | Add Page Numbers | 암호화 PDF 차단 | isEncryptedPDF → fileError |
+| IV-074 | Add Page Numbers | startNumber < 1 차단 | Number.isInteger && >= 1 → startNumberError |
+| IV-075 | Add Page Numbers | 소수 startNumber 차단 | !Number.isInteger → startNumberError |
+| IV-076 | Odd/Even | 암호화 PDF 차단 | isEncryptedPDF → fileError |
+| IV-077 | Odd/Even | 모드 미선택 시 실행 불가 | mode===null → canExecute=false |
+| IV-078 | Odd/Even | 1페이지 even 실행 불가 | noPages → canExecute=false |
+
+## 5.9 에러 처리 — 5개 신규 기능
+
+| ID | 에러 시나리오 | 기대 메시지 |
+|----|-------------|------------|
+| ET-038 | Info — 손상 PDF | "PDF 파일을 읽을 수 없어요. 파일이 손상되었거나 올바른 PDF 형식이 아닐 수 있어요." |
+| ET-039 | Remove Metadata — 암호화 PDF | "암호화된 파일은 메타데이터 제거를 지원하지 않아요. 잠금 해제 탭에서 먼저 잠금을 해제해주세요." |
+| ET-040 | Add Page Numbers — 암호화 PDF | "암호화된 파일은 지원하지 않아요. 잠금 해제 후 다시 시도해 주세요." |
+| ET-041 | Add Page Numbers — startNumber 오류 | "1 이상의 숫자를 입력해주세요." |
+| ET-042 | Odd/Even — 암호화 PDF | "암호화된 파일은 지원하지 않아요. 잠금 해제 후 다시 시도해 주세요." |
+| ET-043 | Odd/Even — 짝수 없음 | "짝수 페이지가 없어요. 이 파일은 1페이지뿐이에요." |
+
+## 6.9 다운로드 결과 검증 — 5개 신규 기능
+
+| ID | 기능 | 검증 항목 | 확인 방법 |
+|----|------|----------|-----------|
+| DL-RM-001 | Remove Metadata | 제거 후 PDF 열림 | 다운로드 파일 열기 |
+| DL-RM-002 | Remove Metadata | 메타데이터 필드 비어있음 | PDF 뷰어 속성 확인 또는 Info 탭으로 재확인 |
+| DL-PN-001 | Add Page Numbers | 번호 위치 정확 | 선택한 위치에 번호 표시됨 |
+| DL-PN-002 | Add Page Numbers | 번호 값 정확 | 시작 번호부터 순서대로 |
+| DL-PN-003 | Add Page Numbers | 원본 페이지 수 보존 | 변환 전후 페이지 수 동일 |
+| DL-OE-001 | Odd/Even | 홀수 추출 페이지 수 | Math.ceil(총페이지 / 2) |
+| DL-OE-002 | Odd/Even | 짝수 추출 페이지 수 | Math.floor(총페이지 / 2) |
+| DL-OE-003 | Odd/Even | 파일명 정확 | `{원본}_{odd or even}.pdf` |
+
+## 8.10 회귀 테스트 체크리스트 — 5개 신규 기능
+
+- [ ] Info: PDF 업로드 후 메타데이터 표시 확인
+- [ ] Info: 암호화 PDF → Lock 배너 + 정보 부분 표시
+- [ ] Info: 정보 복사 버튼 동작
+- [ ] Remove Metadata: 메타데이터 있는 PDF → 제거 후 Info 탭에서 빈칸 확인
+- [ ] Remove Metadata: 암호화 PDF 차단 확인
+- [ ] Add Page Numbers: bottom-center 번호 정상 표시
+- [ ] Add Page Numbers: startNumber 유효성 에러 및 버튼 비활성
+- [ ] Odd/Even: 짝수 페이지 없는 1페이지 PDF → amber 배너
+- [ ] Odd/Even: odd/even 모드 전환 시 파일명 자동갱신
+- [ ] 12탭 전체 탭 전환 정상 동작
+- [ ] 기존 8개 탭 기능 회귀 없음 확인
+- [ ] **Unlock 기능 미구현 확인** — App.tsx에 탭 없음, PRD Feature 9 요구사항 미충족
+
+
+
 ## 9. 출시 전 Blocking Bug 기준
 
 아래 항목 중 하나라도 해당되면 출시를 차단(BLOCKING)한다.
@@ -961,3 +1122,4 @@
 *v3.0: PDF 회전(Rotate) 및 순서 변경(Reorder) 기능 테스트 시나리오 추가. 실제 구현 코드(useRotate.ts, useReorder.ts, rotate.ts, reorder.ts, RotatePage.tsx, ReorderPage.tsx) 기반으로 작성.*
 *v4.0: PDF 암호화(Password Protect) 기능 테스트 시나리오 추가. 실제 구현 코드(usePasswordProtect.ts, protect.ts, PasswordProtectPage.tsx, PasswordInput.tsx) 기반으로 작성. 아키텍처 차이(WASM → pdf-lib-plus-encrypt) 문서화.*
 *v5.0: 이미지→PDF(Image to PDF) 기능 테스트 시나리오 추가. 실제 구현 코드(useImageToPdf.ts, imageToPdf.ts, ImageToPdfPage.tsx, validateImage.ts) 기반으로 작성. Canvas 변환 경로(WebP/GIF/BMP) 및 outputNameDirty 로직 검증 포함.*
+*v6.0: 5개 신규 기능(Info, Remove Metadata, Add Page Numbers, Odd/Even, Unlock) 테스트 시나리오 추가. Unlock 미구현 이슈(I-24) 문서화. 12탭 구조 확인.*

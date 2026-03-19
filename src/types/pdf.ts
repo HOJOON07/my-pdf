@@ -28,7 +28,10 @@ export interface PageRangeGroup {
 export type ProcessingStatus = 'idle' | 'wasm-init' | 'processing' | 'done' | 'error'
 
 /** 앱 탭 */
-export type ActiveTab = 'merge' | 'split' | 'extract' | 'delete' | 'rotate' | 'reorder' | 'encrypt' | 'image-to-pdf'
+export type ActiveTab =
+  | 'merge' | 'split' | 'extract' | 'delete'
+  | 'rotate' | 'reorder' | 'encrypt' | 'image-to-pdf'
+  | 'info' | 'remove-metadata' | 'add-page-numbers' | 'odd-even'
 
 /** Image to PDF 페이지 크기 모드 */
 export type PageSizeMode = 'a4' | 'letter' | 'original'
@@ -57,6 +60,39 @@ export interface PageRotation {
   /** 추가할 회전 각도 */
   rotateDegrees: RotateDegree
 }
+
+/** PDF 문서 정보 (Info 기능) */
+export interface PdfInfo {
+  fileName: string
+  fileSize: number
+  pdfVersion: string
+  pageCount: number
+  title?: string
+  author?: string
+  subject?: string
+  keywords?: string
+  creator?: string
+  producer?: string
+  creationDate?: Date
+  modificationDate?: Date
+  isEncrypted: boolean
+}
+
+/** 페이지 번호 위치 */
+export type PageNumberPosition =
+  | 'bottom-center' | 'bottom-left' | 'bottom-right'
+  | 'top-center' | 'top-left' | 'top-right'
+
+/** 페이지 번호 추가 옵션 */
+export interface PageNumberOptions {
+  position: PageNumberPosition
+  fontSize: number
+  startNumber: number
+  format: 'number' | 'page-n-of-m'
+}
+
+/** 홀수/짝수 추출 모드 */
+export type OddEvenMode = 'odd' | 'even'
 
 /** 순서 바꾸기 기능에서 관리하는 페이지 항목 */
 export interface PageItem {
