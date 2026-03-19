@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx:*)",
+      "Bash(find C:/Users/KOSA_L3/Desktop/agent-team/vibe-pdf/src -name *.tsx -newer C:/Users/KOSA_L3/Desktop/agent-team/vibe-pdf/src/main.tsx)",
+      "Bash(/tmp/verification_section.txt:*)",
+      "Bash(/tmp/write_v.js:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(npm search:*)",
+      "Bash(npm info:*)",
+      "Bash(npm pack:*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
