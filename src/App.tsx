@@ -38,8 +38,8 @@ export default function App() {
         </div>
 
         {/* Tab Navigation */}
-        <nav className="mt-4 overflow-x-auto scrollbar-hide" role="tablist">
-          <div className="flex border-b border-gray-200">
+        <nav className="mt-4" role="tablist">
+          <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -47,10 +47,10 @@ export default function App() {
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'shrink-0 px-4 py-2.5 text-sm font-medium transition-colors',
+                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   activeTab === tab.id
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                 )}
               >
                 {tab.label}
