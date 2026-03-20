@@ -1,3 +1,6 @@
+# 배포 URL
+https://my-pdf.pages.dev/
+
 # vibe-pdf
 
 브라우저에서 동작하는 올인원 PDF 도구. 서버 업로드 없이 모든 처리가 로컬에서 이루어집니다.
